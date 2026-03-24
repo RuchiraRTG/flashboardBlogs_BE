@@ -16,6 +16,12 @@ const topicSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Sinhala topic name is required'],
       trim: true
+    },
+
+    // Controls visibility on frontend
+    isActive: {
+      type: Boolean,
+      default: true
     }
   },
   {
