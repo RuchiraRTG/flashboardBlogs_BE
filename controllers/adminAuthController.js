@@ -1,27 +1,30 @@
 const jwt = require('jsonwebtoken');
-
-const getAdminConfig = () => ({
-  username: process.env.ADMIN_USERNAME || 'admin',
-  password: process.env.ADMIN_PASSWORD || 'admin123',
-  jwtSecret: process.env.ADMIN_JWT_SECRET || 'change-this-in-production',
-  jwtExpiresIn: process.env.ADMIN_JWT_EXPIRES_IN || '12h'
-});
+const User = require('../models/UserModel');
 
 // POST /api/admin/sign-in
-// Body: { username, password }
+// Body: { email, password }
 const signInAdmin = async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { email, password } = req.body;
 
-    if (!username || !password) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Username and password are required.'
+        message: 'Email and password are required.'
       });
     }
 
-    const config = getAdminConfig();
-    const isValid = username === config.username && password === config.password;
+    const normalizedEmail = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials.'
+      });
+    }
+
+    const isValid = await user.comparePassword(password);
 
     if (!isValid) {
       return res.status(401).json({
@@ -30,13 +33,17 @@ const signInAdmin = async (req, res) => {
       });
     }
 
+    const jwtSecret = process.env.ADMIN_JWT_SECRET || 'change-this-in-production';
+    const jwtExpiresIn = process.env.ADMIN_JWT_EXPIRES_IN || '12h';
+
     const token = jwt.sign(
       {
         role: 'admin',
-        username: config.username
+        userId: user._id,
+        email: user.email
       },
-      config.jwtSecret,
-      { expiresIn: config.jwtExpiresIn }
+      jwtSecret,
+      { expiresIn: jwtExpiresIn }
     );
 
     res.status(200).json({
@@ -45,9 +52,9 @@ const signInAdmin = async (req, res) => {
       data: {
         token,
         tokenType: 'Bearer',
-        expiresIn: config.jwtExpiresIn,
+        expiresIn: jwtExpiresIn,
         user: {
-          username: config.username,
+          email: user.email,
           role: 'admin'
         }
       }
@@ -67,7 +74,8 @@ const getAdminSession = async (req, res) => {
     res.status(200).json({
       success: true,
       data: {
-        username: req.admin.username,
+        userId: req.admin.userId,
+        email: req.admin.email,
         role: req.admin.role
       }
     });

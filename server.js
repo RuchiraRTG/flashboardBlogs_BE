@@ -4,6 +4,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const connectDB = require('./config/db');
+const { seedAdminUserFromEnv } = require('./services/adminUserService');
 
 // Import routes
 const blogRoutes = require('./routes/blogRoutes');
@@ -16,9 +17,6 @@ const publicRoutes = require('./routes/publicRoutes');
 
 // Import middleware
 const { requestSizeLimits, addSecurityHeaders, sanitizeArticleContent } = require('./middleware/securityMiddleware');
-
-// Connect to MongoDB
-connectDB();
 
 // Initialize Express app
 const app = express();
@@ -74,6 +72,14 @@ app.use((err, req, res, next) => {
 // ── Start server ─────────────────────────────────────────────────────────────
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
+
+const startServer = async () => {
+  await connectDB();
+  await seedAdminUserFromEnv();
+
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+};
+
+startServer();
