@@ -7,14 +7,15 @@ const {
   updateBlog,
   deleteBlog
 } = require('../controllers/blogController');
+const { requireAdminAuth } = require('../middleware/adminAuthMiddleware');
 
 // POST   /api/blogs       → Create a new blog
 // GET    /api/blogs       → Get all blogs
-router.route('/').post(createBlog).get(getAllBlogs);
+router.route('/').post(requireAdminAuth, createBlog).get(getAllBlogs);
 
 // GET    /api/blogs/:id   → Get a single blog
 // PUT    /api/blogs/:id   → Update a blog
 // DELETE /api/blogs/:id   → Delete a blog
-router.route('/:id').get(getBlogById).put(updateBlog).delete(deleteBlog);
+router.route('/:id').get(getBlogById).put(requireAdminAuth, updateBlog).delete(requireAdminAuth, deleteBlog);
 
 module.exports = router;
